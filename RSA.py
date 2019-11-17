@@ -287,6 +287,7 @@ if __name__ == '__main__':
         szyfrowanie.encrypt_file("dane\\data1.txt")
         szyfrowanie.decrypt_file("dane\\data1-encrypted.txt")
     else:
+        print(Fore.LIGHTRED_EX + "!!!Linuks lepszy!!!" + Fore.RESET)
         szyfrowanie = Szyfrowanie("dane/klucz")
         szyfrowanie.save_key("dane/klucz")
         szyfrowanie.encrypt_file("dane/data1.txt")
