@@ -27,7 +27,7 @@ def Beep(duration = 0.40):
 
 ######################   KLASY   #####################
 class Szyfrowanie():
-    def __init__(self,filepath = "",e = -1, d = -1, n = -1):
+    def __init__(self,filepath = "",e = -1, d = -1, n = -1,p = -1,q = -1):
         start = time.perf_counter()
 
         #zbiór liczb pierwszych
@@ -64,7 +64,7 @@ class Szyfrowanie():
 
         if ((e <= 0 or d <= 0 or n <= 0) and (filepath == None or filepath == "")):
             #generowanie kluczy
-            self.generate_keys()
+            self.generate_keys(p,q)
         else:
             print(Fore.GREEN + "Ustawiam klucze: " + Fore.RESET)
             
@@ -90,14 +90,20 @@ class Szyfrowanie():
             print(minuty,"min,",sekundy,"sec ]")
         print("\n")
 
-    def generate_keys(self):
-        print(Fore.GREEN + "\nGeneruję p",Fore.RESET)
-        self.p = self.pierwsze[randint(0,self.pierwsze.size-1)]
-        print("p =",self.p)
+    def generate_keys(self,p = -1,q = -1):
+        if (p <= 0 or q <= 0):
+            print(Fore.GREEN + "\nGeneruję p",Fore.RESET)
+            self.p = self.pierwsze[randint(0,self.pierwsze.size-1)]
+            print("p =",self.p)
 
-        print(Fore.GREEN + "Generuję q",Fore.RESET)
-        self.q = self.pierwsze[randint(0,self.pierwsze.size-1)]
-        print("q =",self.q)
+            print(Fore.GREEN + "Generuję q",Fore.RESET)
+            self.q = self.pierwsze[randint(0,self.pierwsze.size-1)]
+            print("q =",self.q)
+        else:
+            self.p = p
+            self.q = q
+            print("p =",self.p)
+            print("q =",self.q)
 
         self.N = self.p * self.q
 
@@ -113,6 +119,22 @@ class Szyfrowanie():
         print(Fore.LIGHTRED_EX + "\nKlucz publiczny:",Fore.RESET , "(" , self.e , "," , self.N , ")")
         print(Fore.LIGHTRED_EX + "Klucz prywatny:",Fore.RESET , "(" , self.d , "," , self.N , ")")
 
+    def fast_mod(self,a:int,b:int,m:int):
+        i = 1
+        result = 1
+        x = a%m
+
+        while (i <= b):
+            x %= m
+            if ((b&i) != 0):
+                result *= x
+                result %= m
+            x *= x
+            i <<= 1
+
+        return result
+
+
     def find_e(self):
         helper1 = 0
         helper2 = 0
@@ -120,6 +142,8 @@ class Szyfrowanie():
 
         print(Fore.GREEN + "Szukam e",Fore.RESET)
 
+        #stare
+        '''
         while(True):
             self.e += 1
             e1 = self.e
@@ -141,15 +165,50 @@ class Szyfrowanie():
             
             if ((e2 == 1) and (e1 == 1)):
                 break
+        '''
+        e = 3
+
+        while e <= self.euler:
+            a = self.euler
+            b = e
+
+            while b:
+                a, b = b, a % b
+
+            if a == 1:
+                self.e = e
+                break
+            else:
+                e += 2
 
         print("e =",self.e)
 
+    def extended_euclidean_algorithm(self,a, b):
+        if a == 0:
+            return b, 0, 1
+        else:
+            g, y, x = self.extended_euclidean_algorithm(b % a, a)
+            return g, x - (b // a) * y, y
+
+    def modular_inverse(self,e, t):
+        g, x, y = self.extended_euclidean_algorithm(e, t)
+
+        if g != 1:
+            raise Exception('Modular inverse does not exist')
+        else:
+            return x % t
+
     def find_d(self):
         print(Fore.GREEN + "Szukam d",Fore.RESET)
+        #stare
+        '''
         while(True):
             self.d += 1
             if ((self.e * self.d) % self.euler == 1):
                 break
+        '''
+        self.d = self.modular_inverse(self.e,self.euler)
+        
         print("d =", self.d)
 
     def save_key(self,filepath:str):
@@ -226,7 +285,8 @@ class Szyfrowanie():
             encrypted_blocks.append(asc)
 
             for i in range(len(encrypted_blocks)):
-                encrypted_blocks[i] = str((encrypted_blocks[i]**self.e) % self.N)
+                #encrypted_blocks[i] = str((encrypted_blocks[i]**self.e) % self.N)
+                encrypted_blocks[i] = str(self.fast_mod(encrypted_blocks[i],self.e,self.N))
             
             data_encrypted = " ".join(encrypted_blocks)
             f = open(path,"w+",encoding='utf-8')
@@ -259,7 +319,8 @@ class Szyfrowanie():
 
             data_decrypted = ""
             for i in range(len(int_blocks)):
-                int_blocks[i] = (int_blocks[i]**self.d) % self.N
+                #int_blocks[i] = (int_blocks[i]**self.d) % self.N
+                int_blocks[i] = self.fast_mod(int_blocks[i],self.d,self.N)
                 
                 tmp = ""
                 for c in range(block_size):
@@ -280,7 +341,7 @@ class Szyfrowanie():
 #main
 if __name__ == '__main__':
     print(Fore.GREEN + "[RSA]\n",Fore.RESET)
-
+    '''
     if (os.name == 'nt'):
         szyfrowanie = Szyfrowanie("dane\\klucz")
         szyfrowanie.save_key("dane\\klucz")
@@ -298,3 +359,11 @@ if __name__ == '__main__':
         print("Koniec")
     except:
         print("Koniec")
+    '''
+    #s = Szyfrowanie("dane\\klucz")
+    #s = Szyfrowanie("",-1,-1,-1,57727,60107)
+    #s = Szyfrowanie("",-1,-1,-1,969257,972353)
+    s = Szyfrowanie("",-1,-1,-1,999961,999983)
+    s.encrypt_file("dane\\data1.txt")
+    s.decrypt_file("dane\\data1-encrypted.txt")
+    #print(s.fast_mod(2081,937,2537))
